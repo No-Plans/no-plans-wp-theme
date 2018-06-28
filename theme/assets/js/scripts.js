@@ -1,8 +1,48 @@
 var wHeight =  $(window).height();
 var wWidth =  $(window).width();
-var throttle = 50;
+var throttle = function (fn, wait) {
+  var time = Date.now();
+  return function() {
+    if ((time + wait - Date.now()) < 0) {
+      fn();
+      time = Date.now();
+    }
+  }
+};
+
+var App = {};
+
+App.window = {
+  width: wWidth,
+  height: wHeight
+};
+
+App.loadRespVideo = function ($video, callback) {
+  if (!$video || $video.length < 1) return false;
+  if ($video.data('lazy') === 'loaded') return callback;
+  winW = this.window.width;
+  winH = this.window.height;
+  portraitMode = winW < winH;
+  var HD = portraitMode ? winW >= 768 : winW >= 812;
+  // get best src
+  var srcset = $video.data('lazy-srcset');
+  srcset = srcset ? srcset.split(',') : [];
+  var src = HD && srcset[1] ? srcset[1] : srcset[0];
+  // load src
+  if (!src) return console.warn('No videos in data-lazy-srcset');
+  $video.attr('src', src).attr('lazy', 'loaded').removeAttr('data-lazy-srcset');
+  return callback;
+};
+
+App.pauseAllVideos = function () {
+  $('video').each(function() {
+    var vid = $(this).get(0);
+    if (!vid.paused) return vid.pause();
+  });
+};
 
 
+// ready
 $(document).ready(function(){
   if (wWidth > 760) {
     $('.home video').prop('autoplay', false);
@@ -27,7 +67,7 @@ $(document).ready(function(){
 
     // return "The local time in " + city + " is " + nd.toLocaleString();
     return nd;
-}
+  }
 
     var ldn = calcTime('LDN', '+0').getHours();
     var nyc = calcTime('NYC', '-5').getHours();
@@ -55,49 +95,75 @@ $(document).ready(function(){
       $('.nyc img.sun-up').addClass('now');
     }
 
-  var scrollTimeout;
-  var scrolled = false;
+  var afterScroll;
+  var afterScrollDelay = 100;
+  // var scrolled = false;
   var intro = $('.intro-container').outerHeight();
   var dHeight = $(document).height();
   var wHeightPlus = wHeight * 2;
+  var lazyVids = '.home .case-study video[data-lazy-srcset]';
 
-  $(window).on('scroll', function () {
- 
-    if (!scrollTimeout) {
-      scrollTimeout = setTimeout(function () {
+  // load responsive videos based on scroll position
+  var loadVideosByScrollPos = function (selector, y) {
+    var videos = $(selector);
+    if (videos.length < 1) return;
+    videos.each(function () {
+      $this = $(this);
+      elTop = $this.offset().top;
+      if (elTop <= y + wHeightPlus) return App.loadRespVideo($this);
+    });
+  };
 
-          if ($(window).scrollTop() > intro) {
-            $('.logo').addClass('up');
-          }
-          if ($(window).scrollTop() < intro) {
-            $('.logo').removeClass('up');
-          }
+  var playVideosInView = function (vid) {
+    $('.home .case-study video').each(function() {
+      var vid = $(this).get(0);
+      var edges = vid.getBoundingClientRect(); // distance from window top
+      var inView = 0 < edges.bottom && edges.top <= wHeight;
+      var isPaused = vid.paused;
+      if (inView) {
+        if (isPaused) return vid.play();
+      } else {
+        if (!isPaused) return vid.pause();
+      }
+    });
+  }
 
-          if( $(window).scrollTop() + wHeightPlus >= dHeight ) {
-              $('.thankyou').addClass('show');
-          }
-          if($(window).scrollTop() + wHeightPlus < dHeight ) {
-              $('.thankyou').removeClass('show');
-          }
-
-          $('.home .case-study').each(function() {
-            var elementOffset = $(this).position().top;
-            var distance = (elementOffset - $(window).scrollTop());
-
-            if (distance < 300) {
-            	// pauses all case studies videos
-    				$('.case-study').find('video').each(function() {
-    				  $(this).get(0).pause();
-    				});
-				    // play this video
-              $(this).find('video')[0].play();
-            }
-          }); 
-      //  }
-      scrollTimeout = null;
-      }, throttle);
+  var toggleLogo = function (y) {
+    if (y > intro) {
+      $('.logo').addClass('up');
     }
-  });
+    if (y < intro) {
+      $('.logo').removeClass('up');
+    }
+  };
+
+  var toggleThankYou = function (y) {
+    if (y + wHeightPlus >= dHeight) {
+      $('.thankyou').addClass('show');
+    }
+    if (y + wHeightPlus < dHeight) {
+       $('.thankyou').removeClass('show');
+    }
+  }
+
+  // scroll handler
+  var onScroll = throttle(function () {
+    var scrollTop = $(window).scrollTop();
+    loadVideosByScrollPos(lazyVids, scrollTop);
+    // scroll timeout
+    clearTimeout(afterScroll);
+    afterScroll = setTimeout(function () {
+      toggleLogo(scrollTop);
+      toggleThankYou(scrollTop);
+      playVideosInView();
+    }, afterScrollDelay);
+  }, 100);
+
+  // set videos on ready
+  loadVideosByScrollPos(lazyVids, $(window).scrollTop());
+  playVideosInView();
+  // on scroll
+  $(window).on('scroll', onScroll);
 
   /* SHOWS ONLY CATEGORY ON CLICK, AND SHOWS EVERYTHING WHEN RE-CLICKED */
     $('.filters button').click(function(){
@@ -118,7 +184,6 @@ $(document).ready(function(){
         $('html, body').animate({scrollTop:$('#archive').position().top + 0}, 400);
       }
     });
-
 });  
 
 
@@ -178,8 +243,8 @@ $(document).ready(function(){
 
 });
 
-
-$(document).on('mousedown','.project-toggle.project_closed',function(e){
+// toggle projects
+$(document).on('mousedown','.project-toggle.project_closed', function (e) {
 
   // store this project variables
   var this_project = $(this);
@@ -190,20 +255,26 @@ $(document).on('mousedown','.project-toggle.project_closed',function(e){
   // close all other projects
   $('.project-toggle').removeClass('project_open').addClass('project_closed');
   $('.project-content').slideUp('400').removeClass('open');
-  
-  // pauses all videos
-  $('video').each(function() {
-    $(this).get(0).pause();
-  });
-  
+
   // open this project
   this_project.addClass('project_open').removeClass('project_closed');
   this_project_content.slideDown('400').addClass('open');
 
   // add autoplay for mobile on this project
+  /* delete ?
   if (wWidth <= 760) {
     $('video').prop('autoplay', true);
   }
+  */
+
+  // pause all videos
+  App.pauseAllVideos();
+
+  // play video
+  var video = this_project_content.find('video');
+  App.loadRespVideo(video, function () {
+    video.play();
+  });
 
   setTimeout(function(){
     // retrieve the stored variable but with current position
@@ -221,6 +292,7 @@ $(document).on('mousedown','.project-toggle.project_closed',function(e){
 $(document).on('mousedown','.project-toggle.project_open',function(e){
   $('.project-toggle').removeClass('project_open').addClass('project_closed');
   $('.project-content').slideUp('400').removeClass('open');
+  App.pauseAllVideos();
 });
 
 

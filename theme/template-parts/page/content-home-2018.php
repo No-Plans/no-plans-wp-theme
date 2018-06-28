@@ -62,13 +62,7 @@
 		        <div class=' video'>
 		        	<div class='trunk float-container'>
 			        	<div class="video-wrapper L-3-4 M-1-1 gutters">
-					        <video autoplay loop playsinline muted preload='auto' width="100%"  poster='<?php echo $bigimage ?>'>
-					        	<?php if(get_field('video')): ?>
-					        		<source src="<?php the_field('video') ?>" type="video/mp4" />
-					        	<?php elseif(get_field('video-link')): ?>
-					        		<source src="https://no-plans.com/private/wp-content/uploads/<?php the_field('video-link') ?>" type="video/mp4" />
-					        	<?php endif; ?>
-					        </video>
+			        		<?php include(locate_template('template-parts/page/lazy-video.php')) ?>
 					    </div>
 					    <div class="caption gutters">
 					    	<?php if(get_field('url')): ?>
@@ -114,13 +108,7 @@
 		        <div class=' video'>
 		        	<div class='trunk float-container'>
 			        	<div class="video-wrapper L-3-4 M-1-1 gutters">
-					        <video autoplay loop playsinline muted preload='auto' width="100%"  poster='<?php echo $bigimage ?>'>
-					        	<?php if(get_field('video')): ?>
-					        		<source src="<?php the_field('video') ?>" type="video/mp4" />
-					        	<?php elseif(get_field('video-link')): ?>
-					        		<source src="https://no-plans.com/private/wp-content/uploads/<?php the_field('video-link') ?>" type="video/mp4" />
-					        	<?php endif; ?>
-					        </video>
+			        		<?php include(locate_template('template-parts/page/lazy-video.php')) ?>
 					    </div>
 					    <div class="caption gutters">
 					    	<?php if(get_field('url')): ?>
@@ -284,13 +272,11 @@
 				        <div class='project-content'>
 					        <div class='video float-container trunk'>
 					        	<div class="video-wrapper L-3-5 M-1-1 gutters">
+					        		<?php include(locate_template('template-parts/page/lazy-video.php')) ?>
+					        		<?php /**
 							        <video loop playsinline muted preload='auto' width="100%"  poster='<?php echo $bigimage ?>'>
-							        	<?php if(get_field('video')): ?>
-							        		<source src="<?php the_field('video') ?>" type="video/mp4" />
-							        	<?php elseif(get_field('video-link')): ?>
-							        		<source src="https://no-plans.com/private/wp-content/uploads/<?php the_field('video-link') ?>" type="video/mp4" />
-							        	<?php endif; ?>
-							        </video>
+							        	<?php get_template_part('template-parts/page/video__lazy-source') ?>
+							        </video> */ ?>
 							    </div>
 							    
 					      	 	<div class='caption gutters'>
